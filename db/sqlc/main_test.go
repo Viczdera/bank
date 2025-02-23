@@ -18,17 +18,19 @@ const (
 )
 
 var testQueries *Queries
+var testDB *sql.DB
 
 // testing
 func TestMain(t *testing.M) {
-	connec, err := sql.Open(dbDriver, dbSource)
+	var err error
+	testDB, err = sql.Open(dbDriver, dbSource)
 
 	if err != nil {
 		log.Fatal("Could not connect to DB", err)
 	}
 
 	//use connection to create new test queries object
-	testQueries = New(connec)
+	testQueries = New(testDB)
 
 	//run and report back to test runner via the o.exit command
 	os.Exit(t.Run())
