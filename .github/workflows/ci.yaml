@@ -39,10 +39,10 @@ jobs:
     
     - name: Install Golang-Migrate
       run: |
-        curl -L https://github.com/golang-migrate/migrate/releases/download/$version/migrate.$os-$arch.tar.gz | tar xvz
-        sudo mv migrate.linux-amd64 /usr/bin/migrate
+        curl -L https://github.com/golang-migrate/migrate/releases/download/v4.15.2/migrate.linux-amd64.tar.gzip | gunzip | tar xvf -
+        sudo mv migrate /usr/bin
         which migrate
-        
+
     - name: Run DB Migrations
       run: make migrateup
 
