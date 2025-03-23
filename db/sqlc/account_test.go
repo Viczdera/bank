@@ -102,7 +102,7 @@ func TestListAccount(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, accounts, 5)
 
-	for i := 0; i < len(accounts); i++ {
+	for i := range accounts {
 		require.NotEmpty(t, accounts[i])
 	}
 	//duplicate yunno
