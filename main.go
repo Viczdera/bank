@@ -6,21 +6,20 @@ import (
 
 	"github.com/Viczdera/bank/api"
 	db "github.com/Viczdera/bank/db/sqlc"
+	"github.com/Viczdera/bank/db/util"
 
 	_ "github.com/lib/pq"
 )
 
-const (
-	dbDriver      = "postgres"
-	dbSource      = "postgres://root:secret@localhost:8080/s_bank?sslmode=disable"
-	serverAddress = "0.0.0.0:9090"
-)
-
 func main() {
+	//load config from env
+	config, err := util.LoadConfig(".")
+	if err != nil {
+		log.Fatal("Failed to load config 💿", err)
+	}
+
 	//establish connection to db
-
-	connDB, err := sql.Open(dbDriver, dbSource)
-
+	connDB, err := sql.Open(config.DBDriver, config.DBSource)
 	if err != nil {
 		log.Fatal("Could not connect to DB 💿", err)
 	}
@@ -28,7 +27,7 @@ func main() {
 	store := db.NewStore(connDB)
 	server := api.NewServer(store)
 
-	err = server.Start(serverAddress)
+	err = server.Start(config.ServerAddress)
 
 	if err != nil {
 		log.Fatal("server no gree start! 😭", err)
