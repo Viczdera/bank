@@ -7,16 +7,17 @@ import (
 
 // Server to serve http requests
 type Server struct {
-	store  *db.Store
+	store  db.Store ``
 	router *gin.Engine
 }
 
-func NewServer(store *db.Store) *Server {
+func NewServer(store db.Store) *Server {
 	server := &Server{store: store}
 	router := gin.Default()
 
 	router.POST("/accounts", server.createAccount)
 	router.GET("/accounts/:id", server.getAccount)
+	// Use the handler from the other folder
 	router.GET("/accounts/all", server.getAccountsList)
 
 	server.router = router

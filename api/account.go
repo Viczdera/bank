@@ -58,6 +58,8 @@ func (server *Server) getAccount(ctx *gin.Context) {
 		return
 	}
 
+	//account = db.Account{} to check get test
+
 	ctx.JSON(http.StatusOK, account)
 }
 

@@ -19,6 +19,10 @@ func RandomOwner() string {
 
 }
 
+func RandomInt(min int, max int) int64 {
+	return int64(min + rand.Intn(max-min+1))
+}
+
 func RandomBalance() int64 {
 	min := 0
 	max := 100000
