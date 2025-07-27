@@ -1,0 +1,48 @@
+Table "schema_migrations" {
+  "version" int8 [pk, not null]
+  "dirty" bool [not null]
+}
+
+Table "accounts" {
+  "_id" int8 [pk, not null, increment]
+  "balance" int8 [not null, default: 0]
+  "owner" varchar [not null]
+  "currency" varchar [not null]
+  "created_at" timestamptz [not null, default: '2024-11-13 09:12:35.925309+00']
+
+  Indexes {
+    owner [type: btree, name: "accounts_owner_idx"]
+  }
+}
+
+Table "entries" {
+  "_id" int8 [pk, not null, increment]
+  "account_id" int8 [not null, increment]
+  "amount" int8 [not null]
+  "created_at" timestamptz [not null, default: '2024-11-13 09:12:35.925309+00']
+
+  Indexes {
+    account_id [type: btree, name: "entries_account_id_idx"]
+  }
+}
+
+Table "transfers" {
+  "_id" int8 [pk, not null, increment]
+  "from_account" int8 [not null, increment]
+  "to_account" int8 [not null, increment]
+  "amount" int8 [not null, note: 'must be positive']
+  "created_at" timestamptz [not null, default: '2024-11-13 09:12:35.925309+00']
+
+  Indexes {
+    amount [type: btree, name: "transfers_amount_idx"]
+    from_account [type: btree, name: "transfers_from_account_idx"]
+    (from_account, to_account) [type: btree, name: "transfers_from_account_to_account_idx"]
+    to_account [type: btree, name: "transfers_to_account_idx"]
+  }
+}
+
+Ref "entries_account_id_fkey":"accounts"."_id" < "entries"."account_id"
+
+Ref "transfers_from_account_fkey":"accounts"."_id" < "transfers"."from_account"
+
+Ref "transfers_to_account_fkey":"accounts"."_id" < "transfers"."to_account"
