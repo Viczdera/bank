@@ -109,7 +109,7 @@ func TestGetAccountAPI(t *testing.T) {
 
 			//create and start test server and test request. dont really have to start a new server
 			//but can use a recorder feature of the http test package
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := fmt.Sprintf("/accounts/%d", testCase.accountID)

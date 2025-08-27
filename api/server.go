@@ -1,7 +1,11 @@
 package api
 
 import (
+	"fmt"
+
 	db "github.com/Viczdera/bank/db/sqlc"
+	"github.com/Viczdera/bank/token"
+	"github.com/Viczdera/bank/util"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
@@ -9,12 +13,18 @@ import (
 
 // Server to serve http requests
 type Server struct {
-	store  db.Store ``
+	config util.Config
+	store  db.Store
+	token  token.Maker
 	router *gin.Engine
 }
 
-func NewServer(store db.Store) *Server {
-	server := &Server{store: store}
+func NewServer(config util.Config, store db.Store) (*Server, error) {
+	tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetrickey)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create token maker: %w", err)
+	}
+	server := &Server{config: config, store: store, token: tokenMaker}
 	router := gin.Default()
 
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
@@ -32,7 +42,7 @@ func NewServer(store db.Store) *Server {
 	router.POST("/transfer", server.createTransfer)
 
 	server.router = router
-	return server
+	return server, nil
 }
 
 func (server *Server) Start(address string) error {
