@@ -13,24 +13,31 @@ import (
 
 // Server to serve http requests
 type Server struct {
-	config util.Config
-	store  db.Store
-	token  token.Maker
-	router *gin.Engine
+	config     util.Config
+	store      db.Store
+	tokenMaker token.Maker
+	router     *gin.Engine
 }
 
 func NewServer(config util.Config, store db.Store) (*Server, error) {
-	tokenMaker, err := token.NewPasetoMaker(config.TokenSymmetrickey)
+	tokenMaker, err := token.NewPasetoMaker(config.AccessTokenSymmetrickey)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create token maker: %w", err)
 	}
-	server := &Server{config: config, store: store, token: tokenMaker}
-	router := gin.Default()
+	server := &Server{config: config, store: store, tokenMaker: tokenMaker}
 
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		v.RegisterValidation("currency", validCurrency)
 	}
 
+	server.setupRoutes()
+	return server, nil
+}
+
+func (server *Server) setupRoutes() {
+	router := gin.Default()
+
+	router.POST("/users/auth/login", server.loginUser)
 	router.POST("/users", server.createUser)
 	router.GET("/users/:username", server.getUser)
 
@@ -42,7 +49,6 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 	router.POST("/transfer", server.createTransfer)
 
 	server.router = router
-	return server, nil
 }
 
 func (server *Server) Start(address string) error {
