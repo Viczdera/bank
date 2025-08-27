@@ -9,7 +9,8 @@ import (
 )
 
 var (
-	ErrInvalidToken = errors.New("jnvalid token")
+	ErrInvalidToken = errors.New("invalid token")
+	ErrExpiredToken = errors.New("expired token")
 )
 
 type Payload struct {
@@ -40,6 +41,12 @@ func (payload *Payload) GetExpirationTime() (*jwt.NumericDate, error) {
 }
 
 // manually implementing jwt claims
+func (payload *Payload) Valid() error {
+	if time.Now().After(payload.ExpiredAt) {
+		return ErrExpiredToken
+	}
+	return nil
+}
 
 func (payload *Payload) GetIssuedAt() (*jwt.NumericDate, error) {
 	return jwt.NewNumericDate(payload.IssuedAt), nil
