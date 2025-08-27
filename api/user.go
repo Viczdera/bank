@@ -7,7 +7,7 @@ import (
 	"time"
 
 	db "github.com/Viczdera/bank/db/sqlc"
-	"github.com/Viczdera/bank/db/util"
+	"github.com/Viczdera/bank/util"
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 )
