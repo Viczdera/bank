@@ -58,7 +58,16 @@ func TestAuthMiddleware(t *testing.T) {
 		{
 			name: "InvalidAuthorizationHeader",
 			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
-				addAuthHeader(t, request, tokenMaker, AUTH_TYPE, util.RandomOwner(), -time.Minute)
+				addAuthHeader(t, request, tokenMaker, "", util.RandomOwner(), time.Minute)
+			},
+			requiredChecks: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusUnauthorized, recorder.Code)
+			},
+		},
+		{
+			name: "ExpiredToken",
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthHeader(t, request, tokenMaker, "", util.RandomOwner(), -time.Minute)
 			},
 			requiredChecks: func(t *testing.T, recorder *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusUnauthorized, recorder.Code)
