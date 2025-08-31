@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	db "github.com/Viczdera/bank/db/sqlc"
+	"github.com/Viczdera/bank/token"
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 )
@@ -23,8 +24,19 @@ func (server *Server) createAccount(ctx *gin.Context) {
 		return
 	}
 
+	authPayload := ctx.MustGet(AUTH_PAYLOAD_KEY).(*token.Payload)
+	// 	ctx.MustGet() is a method from the Gin framework that retrieves a value from the context. Unlike the regular Get() method:
+
+	// It panics if the key doesn't exist
+	// It's used when you're absolutely certain the value should be there
+	// The key AUTH_PAYLOAD_KEY is presumably set by an authentication middleware
+	// .(*token.Payload) is performing a type assertion:
+
+	// MustGet returns an interface{}
+	// The type assertion converts it to a *token.Payload
+	// If the assertion fails, this will panic
 	arg := db.CreateAccountParams{
-		Owner:    req.Owner,
+		Owner:    authPayload.Username,
 		Currency: req.Currency,
 		Balance:  0,
 	}
@@ -57,8 +69,19 @@ func (server *Server) getAccount(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, errResponse(err))
 		return
 	}
+	authPayload := ctx.MustGet(AUTH_PAYLOAD_KEY).(*token.Payload)
+	// 	ctx.MustGet() is a method from the Gin framework that retrieves a value from the context. Unlike the regular Get() method:
 
-	account, err := server.store.GetAccount(ctx, req.ID)
+	// It panics if the key doesn't exist
+	// It's used when you're absolutely certain the value should be there
+	// The key AUTH_PAYLOAD_KEY is presumably set by an authentication middleware
+	// .(*token.Payload) is performing a type assertion:
+
+	// MustGet returns an interface{}
+	// The type assertion converts it to a *token.Payload
+	// If the assertion fails, this will panic
+	account, err := server.store.GetAccount(ctx, int64(authPayload.ID.ID()))
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, errResponse(err))
