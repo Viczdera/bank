@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -12,7 +13,6 @@ import (
 )
 
 type createAccountRequest struct {
-	Owner    string `json:"owner" binding:"required"`
 	Currency string `json:"currency" binding:"required,currency"`
 }
 
@@ -80,7 +80,7 @@ func (server *Server) getAccount(ctx *gin.Context) {
 	// MustGet returns an interface{}
 	// The type assertion converts it to a *token.Payload
 	// If the assertion fails, this will panic
-	account, err := server.store.GetAccount(ctx, int64(authPayload.ID.ID()))
+	account, err := server.store.GetAccount(ctx, req.ID)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -92,7 +92,10 @@ func (server *Server) getAccount(ctx *gin.Context) {
 		return
 	}
 
-	//account = db.Account{} to check get test
+	if account.Owner != authPayload.Username {
+		ctx.JSON(http.StatusUnauthorized, errResponse(fmt.Errorf("account does not belong to the authenticated user")))
+		return
+	}
 
 	ctx.JSON(http.StatusOK, account)
 }
@@ -109,7 +112,10 @@ func (server *Server) getAccountsList(ctx *gin.Context) {
 		return
 	}
 
+	authPayload := ctx.MustGet(AUTH_PAYLOAD_KEY).(*token.Payload)
+
 	args := db.ListAccountsParams{
+		Owner:  authPayload.Username,
 		Limit:  req.PageSize,
 		Offset: (req.CurrentPage - 1) * req.PageSize,
 	}
