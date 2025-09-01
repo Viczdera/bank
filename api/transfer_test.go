@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	mockdb "github.com/Viczdera/bank/db/mock"
 	db "github.com/Viczdera/bank/db/sqlc"
+	"github.com/Viczdera/bank/token"
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -23,6 +25,7 @@ func TestCreateTransferAPI(t *testing.T) {
 	testCases := []struct {
 		name          string
 		body          gin.H
+		setupAuth     func(*testing.T, *http.Request, token.Maker, string)
 		buildStubs    func(store *mockdb.MockStore)
 		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
 	}{
@@ -33,6 +36,9 @@ func TestCreateTransferAPI(t *testing.T) {
 				"to_account":   toAccount.ID,
 				"currency":     fromAccount.Currency,
 				"amount":       amount,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker, owner string) {
+				addAuthHeader(t, request, tokenMaker, AUTH_TYPE, owner, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				// Validate from account
@@ -68,6 +74,9 @@ func TestCreateTransferAPI(t *testing.T) {
 				"currency":     fromAccount.Currency,
 				"amount":       amount,
 			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker, owner string) {
+				addAuthHeader(t, request, tokenMaker, AUTH_TYPE, owner, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetAccount(gomock.Any(), gomock.Eq(int64(99))).
@@ -85,6 +94,9 @@ func TestCreateTransferAPI(t *testing.T) {
 				"to_account":   toAccount.ID,
 				"currency":     "EUR",
 				"amount":       amount,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker, owner string) {
+				addAuthHeader(t, request, tokenMaker, AUTH_TYPE, owner, time.Minute)
 			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
@@ -113,6 +125,8 @@ func TestCreateTransferAPI(t *testing.T) {
 
 			req, err := http.NewRequest(http.MethodPost, "/transfer", bytes.NewReader(data))
 			require.NoError(t, err)
+
+			tc.setupAuth(t, req, server.tokenMaker, fromAccount.Owner)
 
 			server.router.ServeHTTP(recorder, req)
 			tc.checkResponse(t, recorder)
