@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Viczdera/bank/db/util"
+	"github.com/Viczdera/bank/util"
 	"github.com/stretchr/testify/require"
 )
 
@@ -89,20 +89,21 @@ func TestDeleteAccount(t *testing.T) {
 }
 
 func TestListAccount(t *testing.T) {
-
+	var lastAccount Account
 	for i := 0; i < 10; i++ {
-		createTestAccount(t)
+		lastAccount = createTestAccount(t)
 	}
 
 	args := ListAccountsParams{
+		Owner:  lastAccount.Owner,
 		Limit:  5,
-		Offset: 5,
+		Offset: 0,
 	}
 
 	accounts, err := testQueries.ListAccounts(context.Background(), args)
 
 	require.NoError(t, err)
-	require.Len(t, accounts, 5)
+	require.NotEmpty(t, accounts)
 
 	for i := range accounts {
 		require.NotEmpty(t, accounts[i])
@@ -110,6 +111,7 @@ func TestListAccount(t *testing.T) {
 	//duplicate yunno
 	for _, account := range accounts {
 		require.NotEmpty(t, account)
+		require.Equal(t, lastAccount.Owner, account.Owner)
 	}
 
 }

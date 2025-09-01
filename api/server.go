@@ -1,7 +1,11 @@
 package api
 
 import (
+	"fmt"
+
 	db "github.com/Viczdera/bank/db/sqlc"
+	"github.com/Viczdera/bank/token"
+	"github.com/Viczdera/bank/util"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
@@ -9,30 +13,45 @@ import (
 
 // Server to serve http requests
 type Server struct {
-	store  db.Store ``
-	router *gin.Engine
+	config     util.Config
+	store      db.Store
+	tokenMaker token.Maker
+	router     *gin.Engine
 }
 
-func NewServer(store db.Store) *Server {
-	server := &Server{store: store}
-	router := gin.Default()
+func NewServer(config util.Config, store db.Store) (*Server, error) {
+	tokenMaker, err := token.NewPasetoMaker(config.AccessTokenSymmetrickey)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create token maker: %w", err)
+	}
+	server := &Server{config: config, store: store, tokenMaker: tokenMaker}
 
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		v.RegisterValidation("currency", validCurrency)
 	}
 
+	server.setupRoutes()
+	return server, nil
+}
+
+func (server *Server) setupRoutes() {
+	router := gin.Default()
+
 	router.POST("/users", server.createUser)
-	router.GET("/users/:username", server.getUser)
+	router.POST("/users/auth/login", server.loginUser)
 
-	router.POST("/accounts", server.createAccount)
-	router.GET("/accounts/:id", server.getAccount)
+	//routes requiring authentication
+	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))
+
+	authRoutes.GET("/users/:username", server.getUser)
+	authRoutes.POST("/accounts", server.createAccount)
+	authRoutes.GET("/accounts/:id", server.getAccount)
 	// Use the handler from the other folder
-	router.GET("/accounts/all", server.getAccountsList)
+	authRoutes.GET("/accounts/all", server.getAccountsList)
 
-	router.POST("/transfer", server.createTransfer)
+	authRoutes.POST("/transfer", server.createTransfer)
 
 	server.router = router
-	return server
 }
 
 func (server *Server) Start(address string) error {

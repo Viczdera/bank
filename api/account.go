@@ -2,16 +2,17 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 
 	db "github.com/Viczdera/bank/db/sqlc"
+	"github.com/Viczdera/bank/token"
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 )
 
 type createAccountRequest struct {
-	Owner    string `json:"owner" binding:"required"`
 	Currency string `json:"currency" binding:"required,currency"`
 }
 
@@ -23,8 +24,19 @@ func (server *Server) createAccount(ctx *gin.Context) {
 		return
 	}
 
+	authPayload := ctx.MustGet(AUTH_PAYLOAD_KEY).(*token.Payload)
+	// 	ctx.MustGet() is a method from the Gin framework that retrieves a value from the context. Unlike the regular Get() method:
+
+	// It panics if the key doesn't exist
+	// It's used when you're absolutely certain the value should be there
+	// The key AUTH_PAYLOAD_KEY is presumably set by an authentication middleware
+	// .(*token.Payload) is performing a type assertion:
+
+	// MustGet returns an interface{}
+	// The type assertion converts it to a *token.Payload
+	// If the assertion fails, this will panic
 	arg := db.CreateAccountParams{
-		Owner:    req.Owner,
+		Owner:    authPayload.Username,
 		Currency: req.Currency,
 		Balance:  0,
 	}
@@ -57,8 +69,19 @@ func (server *Server) getAccount(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, errResponse(err))
 		return
 	}
+	authPayload := ctx.MustGet(AUTH_PAYLOAD_KEY).(*token.Payload)
+	// 	ctx.MustGet() is a method from the Gin framework that retrieves a value from the context. Unlike the regular Get() method:
 
+	// It panics if the key doesn't exist
+	// It's used when you're absolutely certain the value should be there
+	// The key AUTH_PAYLOAD_KEY is presumably set by an authentication middleware
+	// .(*token.Payload) is performing a type assertion:
+
+	// MustGet returns an interface{}
+	// The type assertion converts it to a *token.Payload
+	// If the assertion fails, this will panic
 	account, err := server.store.GetAccount(ctx, req.ID)
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, errResponse(err))
@@ -69,7 +92,10 @@ func (server *Server) getAccount(ctx *gin.Context) {
 		return
 	}
 
-	//account = db.Account{} to check get test
+	if account.Owner != authPayload.Username {
+		ctx.JSON(http.StatusUnauthorized, errResponse(fmt.Errorf("account does not belong to the authenticated user")))
+		return
+	}
 
 	ctx.JSON(http.StatusOK, account)
 }
@@ -86,7 +112,10 @@ func (server *Server) getAccountsList(ctx *gin.Context) {
 		return
 	}
 
+	authPayload := ctx.MustGet(AUTH_PAYLOAD_KEY).(*token.Payload)
+
 	args := db.ListAccountsParams{
+		Owner:  authPayload.Username,
 		Limit:  req.PageSize,
 		Offset: (req.CurrentPage - 1) * req.PageSize,
 	}

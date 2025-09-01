@@ -8,10 +8,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	mockdb "github.com/Viczdera/bank/db/mock"
 	db "github.com/Viczdera/bank/db/sqlc"
-	"github.com/Viczdera/bank/db/util"
+	"github.com/Viczdera/bank/token"
+	"github.com/Viczdera/bank/util"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -22,12 +24,16 @@ func TestGetAccountAPI(t *testing.T) {
 	testCases := []struct {
 		name           string
 		accountID      int64
+		setupAuth      func(*testing.T, *http.Request, token.Maker, string)
 		buildStubs     func(store *mockdb.MockStore)
 		requiredChecks func(t *testing.T, recorder *httptest.ResponseRecorder)
 	}{
 		{
 			name:      "OK",
 			accountID: account.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker, owner string) {
+				addAuthHeader(t, request, tokenMaker, AUTH_TYPE, owner, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().GetAccount(gomock.Any(), gomock.Eq(account.ID)). //can be called with any context (hence Any)
 												Times(1). //and specific account arguements (hence Eq)
@@ -40,6 +46,9 @@ func TestGetAccountAPI(t *testing.T) {
 		{
 			name:      "BadRequest",
 			accountID: 0, // invalid ID to simulate bad request
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker, owner string) {
+				addAuthHeader(t, request, tokenMaker, AUTH_TYPE, owner, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().GetAccount(gomock.Any(), gomock.Eq(account.ID)).
 					Times(0)
@@ -51,6 +60,9 @@ func TestGetAccountAPI(t *testing.T) {
 		{
 			name:      "ResponseBody",
 			accountID: account.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker, owner string) {
+				addAuthHeader(t, request, tokenMaker, AUTH_TYPE, owner, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().GetAccount(gomock.Any(), gomock.Eq(account.ID)). //can be called with any context (hence Any)
 												Times(1). //and specific account arguements (hence Eq)
@@ -70,6 +82,9 @@ func TestGetAccountAPI(t *testing.T) {
 		{
 			name:      "NotFound",
 			accountID: account.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker, owner string) {
+				addAuthHeader(t, request, tokenMaker, AUTH_TYPE, owner, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().GetAccount(gomock.Any(), gomock.Eq(account.ID)). //can be called with any context (hence Any)
 												Times(1). //and specific account arguements (hence Eq)
@@ -82,6 +97,9 @@ func TestGetAccountAPI(t *testing.T) {
 		{
 			name:      "InternalError",
 			accountID: account.ID,
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker, owner string) {
+				addAuthHeader(t, request, tokenMaker, AUTH_TYPE, owner, time.Minute)
+			},
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().GetAccount(gomock.Any(), gomock.Eq(account.ID)). //can be called with any context (hence Any)
 												Times(1). //and specific account arguements (hence Eq)
@@ -109,7 +127,7 @@ func TestGetAccountAPI(t *testing.T) {
 
 			//create and start test server and test request. dont really have to start a new server
 			//but can use a recorder feature of the http test package
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := fmt.Sprintf("/accounts/%d", testCase.accountID)
@@ -118,7 +136,9 @@ func TestGetAccountAPI(t *testing.T) {
 			//check error
 			require.NoError(t, err)
 
+			testCase.setupAuth(t, req, server.tokenMaker, account.Owner)
 			server.router.ServeHTTP(recorder, req)
+
 			testCase.requiredChecks(t, recorder)
 
 		})
