@@ -8,7 +8,7 @@ dropdb:
 	docker exec -it bank_postgres12 dropdb s_bank
 
 postgres:
-	docker run --name bank_postgres12 -p 8080:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=secret -d postgres:12-alpine
+	docker run --name bank_postgres12 --network bank-network -p 8080:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=secret -d postgres:12-alpine
 
 migrateup:
 	migrate -path db/migrations  -database "postgres://root:secret@localhost:8080/s_bank?sslmode=disable" -verbose up
